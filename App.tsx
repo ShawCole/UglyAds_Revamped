@@ -3,6 +3,8 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { AspectRatio, TextBlock, AssetBlock, WordStyle, UploadedAsset, BrandBucket, BrandAsset } from './types';
 import { generateAdBackground } from './geminiService';
 import * as htmlToImage from 'html-to-image';
+import JSZip from 'jszip';
+import { useLocalStorage } from './useLocalStorage';
 
 interface RatioConfig {
   value: AspectRatio;
@@ -86,40 +88,35 @@ const getRatioValue = (ratio: AspectRatio): number => {
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'editor' | 'brandHub'>('editor');
-  const [workspaceMode, setWorkspaceMode] = useState<'single' | 'multi'>('single');
-  const [blocks, setBlocks] = useState<(TextBlock | AssetBlock)[]>(INITIAL_BLOCKS);
+  const [workspaceMode, setWorkspaceMode] = useLocalStorage<'single' | 'multi'>('uglyads_workspaceMode', 'single');
+  const [blocks, setBlocks] = useLocalStorage<(TextBlock | AssetBlock)[]>('uglyads_blocks', INITIAL_BLOCKS);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [sourceMode, setSourceMode] = useState<'ai' | 'upload' | 'solid'>('ai');
-  const [solidColor, setSolidColor] = useState<'black' | 'white'>('black');
+  const [sourceMode, setSourceMode] = useLocalStorage<'ai' | 'upload' | 'solid'>('uglyads_sourceMode', 'ai');
+  const [solidColor, setSolidColor] = useLocalStorage<'black' | 'white'>('uglyads_solidColor', 'black');
   const [backgrounds, setBackgrounds] = useState<Partial<Record<AspectRatio, string>>>({});
   const [uploadedAssets, setUploadedAssets] = useState<UploadedAsset[]>([]);
   const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
-  const [activeRatio, setActiveRatio] = useState<AspectRatio>('1:1');
-  const [prompt, setPrompt] = useState<string>('');
+  const [activeRatio, setActiveRatio] = useLocalStorage<AspectRatio>('uglyads_activeRatio', '1:1');
+  const [prompt, setPrompt] = useLocalStorage<string>('uglyads_prompt', '');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [selectedSizes, setSelectedSizes] = useState<AspectRatio[]>(['1:1', '4:5', '9:16', '300x250']);
+  const [selectedSizes, setSelectedSizes] = useLocalStorage<AspectRatio[]>('uglyads_selectedSizes', ['1:1', '4:5', '9:16', '300x250']);
   const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [brands, setBrands] = useState<BrandBucket[]>(() => {
-    const saved = localStorage.getItem('uglyads_brands');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [isBatchExporting, setIsBatchExporting] = useState<boolean>(false);
+  const [brands, setBrands] = useLocalStorage<BrandBucket[]>('uglyads_brands', []);
+  const [selectedBrandId, setSelectedBrandId] = useLocalStorage<string | null>('uglyads_selectedBrandId', null);
   const [newBrandName, setNewBrandName] = useState('');
 
   // Global Tooltip State for Fixed Positioning
   const [hoveredRatio, setHoveredRatio] = useState<RatioConfig | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number, y: number } | null>(null);
 
-  const [topGap, setTopGap] = useState<number>(20);
-  const [bottomGap, setBottomGap] = useState<number>(20);
-  const [isLinked, setIsLinked] = useState<boolean>(true);
+  const [topGap, setTopGap] = useLocalStorage<number>('uglyads_topGap', 20);
+  const [bottomGap, setBottomGap] = useLocalStorage<number>('uglyads_bottomGap', 20);
+  const [isLinked, setIsLinked] = useLocalStorage<boolean>('uglyads_isLinked', true);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    localStorage.setItem('uglyads_brands', JSON.stringify(brands));
-  }, [brands]);
+  const exportCanvasRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const updateVerticalPositions = (newTopGap: number, newBottomGap: number) => {
     setBlocks(prev => prev.map(b => {
@@ -297,6 +294,32 @@ const App: React.FC = () => {
       link.click();
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const exportAllAsZip = async () => {
+    if (selectedSizes.length === 0) return;
+    setIsBatchExporting(true);
+    try {
+      await new Promise(r => setTimeout(r, 300));
+      const zip = new JSZip();
+      for (const ratio of selectedSizes) {
+        const el = exportCanvasRefs.current.get(ratio);
+        if (!el) continue;
+        const config = RATIO_CONFIGS.find(r => r.value === ratio);
+        const dataUrl = await htmlToImage.toPng(el, { cacheBust: true, quality: 1, pixelRatio: 3 });
+        const base64 = dataUrl.split(',')[1];
+        const filename = `${config?.label.replace(/[^a-zA-Z0-9]/g, '_') || ratio}_${config?.dimensions.replace(/\s/g, '')}.png`;
+        zip.file(filename, base64, { base64: true });
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.download = `ugly-ads-bundle-${Date.now()}.zip`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } finally {
+      setIsBatchExporting(false);
     }
   };
 
