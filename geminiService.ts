@@ -78,6 +78,7 @@ export const generateAdBackground = async (
         parts: parts,
       },
       config: {
+        responseModalities: ['IMAGE', 'TEXT'],
         imageConfig: {
           aspectRatio: apiRatio as any,
         },
