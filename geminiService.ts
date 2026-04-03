@@ -2,6 +2,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { AspectRatio } from "./types";
 
+export const AVAILABLE_MODELS = [
+  { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.0-flash-exp', label: 'Nano Banana (Gemini 2.0)' },
+] as const;
+
 /**
  * Gemini 2.5 Flash Image only supports specific aspect ratios: 1:1, 3:4, 4:3, 9:16, 16:9.
  * This function maps our internal target ratios to the closest supported one.
@@ -32,9 +37,10 @@ const mapToSupportedRatio = (ratio: AspectRatio): string => {
 };
 
 export const generateAdBackground = async (
-  prompt: string, 
-  ratio: AspectRatio, 
-  referenceImage?: { data: string; mimeType: string }
+  prompt: string,
+  ratio: AspectRatio,
+  referenceImage?: { data: string; mimeType: string },
+  model: string = 'gemini-2.5-flash-image'
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
@@ -67,7 +73,7 @@ export const generateAdBackground = async (
     const apiRatio = mapToSupportedRatio(ratio);
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model,
       contents: {
         parts: parts,
       },
