@@ -660,8 +660,8 @@ const hook8: HookPreset = {
 // ─── Campaign Preset ────────────────────────────────────────────────────────
 
 export const DENTAL_CANCUN_PRESET: CampaignPreset = {
-  id: 'dental-cancun',
-  name: 'DentalCancun',
+  id: 'dentalcancun-veneers',
+  name: 'DentalCancun Veneers',
   hooks: [hook1, hook2, hook3, hook4, hook5, hook6, hook7, hook8],
   backgroundPrompt:
     'Luxury dental clinic in Puerto Cancun Mexico, turquoise Caribbean water visible through floor-to-ceiling windows, modern minimalist clinical interior, soft natural lighting, premium medical equipment, clean white and teal color palette. NO TEXT NO WORDS NO LETTERS NO NUMBERS NO LOGOS.',
