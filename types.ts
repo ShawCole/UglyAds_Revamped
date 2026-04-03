@@ -57,11 +57,64 @@ export interface BrandBucket {
   assets: BrandAsset[];
 }
 
+export interface BrandVoiceConfig {
+  name: string;
+  product: string;
+  positioning: string;
+  bannedWords: string[];
+  requiredTone: string;
+  cta: string;
+  whatsapp: string;
+  keyProofPoints: string[];
+}
+
+export interface CTABlock {
+  id: string;
+  type: 'cta';
+  text: string;
+  style: 'pill' | 'rect';
+  bgColor: string;
+  textColor: string;
+  position: 'bottom-center' | 'bottom-right';
+  fontSize: number;
+}
+
+export type Block = TextBlock | AssetBlock | CTABlock;
+
+export type SizeCategory = 'tall' | 'square' | 'wide';
+
+export interface HookPreset {
+  id: string;
+  name: string;
+  blocks: TextBlock[];
+  layoutOverrides: {
+    wide?: Partial<TextBlock>[];
+    square?: Partial<TextBlock>[];
+  };
+  backgroundPromptOverride?: string;
+}
+
+export interface CampaignPreset {
+  id: string;
+  name: string;
+  hooks: HookPreset[];
+  backgroundPrompt: string;
+  cta: CTABlock;
+  logo?: {
+    assetUrl: string;
+    corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    scale: number;
+    opacity: number;
+  };
+  brandVoice?: BrandVoiceConfig;
+  targetSizes: AspectRatio[];
+}
+
 export interface AdState {
   backgrounds: Partial<Record<AspectRatio, string>>;
   uploadedAssets: UploadedAsset[];
   activeRatio: AspectRatio;
-  blocks: (TextBlock | AssetBlock)[];
+  blocks: Block[];
   selectedSizes: AspectRatio[];
   sourceMode: 'ai' | 'upload' | 'solid';
 }
