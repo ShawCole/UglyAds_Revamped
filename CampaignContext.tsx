@@ -385,12 +385,19 @@ export const CampaignProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const newBackgrounds = { ...backgrounds };
       for (const ratio of targetSizes) {
-        const url = await generateAdBackground(prompt, ratio, referenceImage, aiModel);
-        newBackgrounds[ratio] = url;
-        setBackgrounds({ ...newBackgrounds });
+        try {
+          const url = await generateAdBackground(prompt, ratio, referenceImage, aiModel);
+          newBackgrounds[ratio] = url;
+          setBackgrounds({ ...newBackgrounds });
+        } catch (ratioError: any) {
+          console.error(`Failed to generate for ${ratio}:`, ratioError);
+          alert(`Error generating ${ratio}: ${ratioError?.message || ratioError}`);
+          break;
+        }
       }
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error('Generation failed:', error);
+      alert(`Generation failed: ${error?.message || error}`);
     } finally {
       setIsGenerating(false);
     }
